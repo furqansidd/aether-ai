@@ -24,9 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_ANON_KEY")
-supabase: Client = create_client(url, key)
+url: str = os.getenv("SUPABASE_URL", "")
+key: str = os.getenv("SUPABASE_ANON_KEY", "")
+try:
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    print(f"Error initializing Supabase client: {e}")
+    supabase = None
 
 class ChatRequest(BaseModel):
     file_path: str
@@ -154,8 +158,12 @@ async def list_datasets():
         raise HTTPException(status_code=500, detail=str(e))
 
 # Prefer service role key for administrative tasks if available
-service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-admin_supabase = create_client(url, service_key if service_key else key)
+service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+try:
+    admin_supabase = create_client(url, service_key if service_key else key)
+except Exception as e:
+    print(f"Error initializing Admin Supabase client: {e}")
+    admin_supabase = None
 
 @app.delete("/datasets/{file_path:path}")
 async def delete_dataset(file_path: str):

@@ -1,12 +1,16 @@
 fastapi
 uvicorn
 langchain
+langchain-core
 langchain-openai
 langchain-experimental
+openai
 supabase
 python-dotenv
 pandas
+numpy
 openpyxl
 tabulate
 pydantic
 python-multipart
+httpx
