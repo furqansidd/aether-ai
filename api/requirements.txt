@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+langchain
+langchain-openai
+langchain-experimental
+supabase
+python-dotenv
+pandas
+openpyxl
+tabulate
+pydantic
+python-multipart
