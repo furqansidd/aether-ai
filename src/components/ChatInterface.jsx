@@ -1,22 +1,20 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Sparkles, BarChart3, Table2, TrendingUp, FileSpreadsheet } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
 import ReactMarkdown from 'react-markdown'
-
-// Helper to get localStorage key for a given fileId
-const chatStorageKey = (id) => `aether_chat_${id}`
+import { supabase, sessionEvents } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function ChatInterface() {
   const { fileId } = useParams()
-  const [messages, setMessages] = useState(() => {
-    try {
-      const saved = localStorage.getItem(chatStorageKey(fileId))
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
+  const { user } = useAuth()
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [messages, setMessages] = useState([])      // single source of truth
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(true) // loading from Supabase
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -29,28 +27,98 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Save messages to localStorage whenever they change
+  // ── Load conversation from Supabase on mount ───────────────────────────────
+  // This is the ONLY place messages are loaded from. localStorage is not used.
+  // Because ChatWrapper uses key={fileId}, this effect reruns for every new file.
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem(chatStorageKey(fileId), JSON.stringify(messages))
+    if (!user || !fileId) {
+      setHistoryLoading(false)
+      return
     }
-  }, [messages])
 
+    let cancelled = false
+
+    const loadHistory = async () => {
+      setHistoryLoading(true)
+      setMessages([]) // always start clean — prevents stale state from previous file
+
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('messages')
+          .eq('user_id', user.id)
+          .eq('file_id', fileId)
+          .maybeSingle()
+
+        if (!cancelled) {
+          if (error) {
+            console.error('Failed to load conversation:', error)
+          } else if (data?.messages?.length > 0) {
+            setMessages(data.messages)
+          }
+          // If no record → leave as [] (fresh chat)
+        }
+      } catch (err) {
+        console.error('Unexpected error loading history:', err)
+      } finally {
+        if (!cancelled) setHistoryLoading(false)
+      }
+    }
+
+    loadHistory()
+
+    return () => { cancelled = true }
+  }, [fileId, user])
+
+  // ── Listen for logout event → immediately wipe local messages ──────────────
   useEffect(() => {
-    inputRef.current?.focus()
+    const unsubscribe = sessionEvents.subscribe((event) => {
+      if (event === 'signout') {
+        setMessages([])
+      }
+    })
+    return unsubscribe
   }, [])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isLoading])
+  // ── Persist messages to Supabase whenever they change ─────────────────────
+  // Uses upsert on (user_id, file_id) unique constraint so it's idempotent.
+  const persistMessages = useCallback(async (updatedMessages) => {
+    if (!user || !fileId || updatedMessages.length === 0) return
+    try {
+      await supabase
+        .from('conversations')
+        .upsert(
+          {
+            user_id: user.id,
+            file_id: fileId,
+            messages: updatedMessages,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,file_id' }
+        )
+    } catch (err) {
+      console.error('Failed to persist conversation:', err)
+    }
+  }, [user, fileId])
 
+  // ── Scroll to bottom when messages update ─────────────────────────────────
+  useEffect(() => {
+    if (!historyLoading) scrollToBottom()
+  }, [messages, isLoading, historyLoading])
+
+  useEffect(() => {
+    if (!historyLoading) inputRef.current?.focus()
+  }, [historyLoading])
+
+  // ── Send message ──────────────────────────────────────────────────────────
   const handleSend = async (text) => {
     const message = text || input
     if (!message.trim() || isLoading) return
-    
+
     const userMsg = { role: 'user', content: message }
     const updatedHistory = [...messages, userMsg]
-    setMessages(prev => [...prev, userMsg])
+
+    setMessages(updatedHistory)
     setInput('')
     setIsLoading(true)
 
@@ -58,33 +126,43 @@ export default function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          file_path: decodeURIComponent(fileId), 
+        body: JSON.stringify({
+          file_path: decodeURIComponent(fileId),
           message,
-          history: updatedHistory 
+          history: updatedHistory
         })
       })
-      
+
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.detail || 'Failed to fetch from server')
       }
-      
-      const aiMsg = { 
-        role: 'assistant', 
+
+      const aiMsg = {
+        role: 'assistant',
         content: data.response,
-        chart: data.chart 
+        chart: data.chart
       }
-      setMessages(prev => [...prev, aiMsg])
+
+      const finalMessages = [...updatedHistory, aiMsg]
+      setMessages(finalMessages)
+
+      // Persist the full updated conversation to Supabase
+      await persistMessages(finalMessages)
+
     } catch (error) {
       console.error(error)
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error analyzing your data. Please try again.' }])
+      const errMsg = { role: 'assistant', content: 'Sorry, I encountered an error analyzing your data. Please try again.' }
+      const finalMessages = [...updatedHistory, errMsg]
+      setMessages(finalMessages)
+      await persistMessages(finalMessages)
     } finally {
       setIsLoading(false)
     }
   }
 
+  // ── Suggested prompts ─────────────────────────────────────────────────────
   const suggestedPrompts = [
     { icon: <Table2 size={16} />, text: 'Summarize this dataset', color: 'bg-[#ede9f6] text-[#5D4492]' },
     { icon: <BarChart3 size={16} />, text: 'Show me a bar chart of the top categories', color: 'bg-[#fef3c7] text-[#d97706]' },
@@ -92,9 +170,10 @@ export default function ChatInterface() {
     { icon: <Sparkles size={16} />, text: 'Find any interesting patterns', color: 'bg-[#dbeafe] text-[#2563eb]' },
   ]
 
+  // ── Chart renderer ────────────────────────────────────────────────────────
   const renderChart = (chartConfig) => {
     if (!chartConfig || !chartConfig.data || chartConfig.data.length === 0) return null
-    
+
     const COLORS = ['#5D4492', '#d97706', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#f59e0b', '#06b6d4']
     const { type, data, xKey, yKey } = chartConfig
 
@@ -113,7 +192,7 @@ export default function ChatInterface() {
         </div>
       )
     }
-    
+
     if (type === 'line') {
       return (
         <div className="h-64 w-full mt-4 bg-white rounded-xl p-3">
@@ -150,6 +229,19 @@ export default function ChatInterface() {
     return null
   }
 
+  // ── Loading skeleton while fetching history ───────────────────────────────
+  if (historyLoading) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-4rem)] max-w-3xl mx-auto items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#5D4492] to-[#8b6cc1] flex items-center justify-center">
+          <Sparkles size={14} className="text-white" />
+        </div>
+        <p className="text-sm text-gray-400">Loading conversation...</p>
+      </div>
+    )
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-w-3xl mx-auto">
 
@@ -199,8 +291,8 @@ export default function ChatInterface() {
                   </div>
                 )}
                 <div className={`max-w-[80%] ${
-                  msg.role === 'user' 
-                    ? 'bg-[#5D4492] text-white rounded-2xl rounded-br-sm px-4 py-3' 
+                  msg.role === 'user'
+                    ? 'bg-[#5D4492] text-white rounded-2xl rounded-br-sm px-4 py-3'
                     : 'bg-transparent text-gray-800'
                 }`}>
                   {msg.role === 'user' ? (
@@ -244,20 +336,20 @@ export default function ChatInterface() {
           </div>
         )}
       </div>
-      
+
       {/* Input Bar */}
       <div className="py-4">
         <div className="relative">
-          <input 
+          <input
             ref={inputRef}
-            type="text" 
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={`Ask anything about ${displayName}...`}
             className="w-full bg-white border border-gray-200 text-gray-800 rounded-2xl py-4 pl-5 pr-14 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#5D4492]/30 focus:border-[#5D4492]/40 transition-all text-[15px]"
           />
-          <button 
+          <button
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             className="absolute right-2 top-2 bottom-2 aspect-square bg-[#5D4492] hover:bg-[#4a3675] disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl flex justify-center items-center transition-all duration-200"

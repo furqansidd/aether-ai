@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, sessionEvents } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
@@ -44,6 +44,19 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
+    // 1. Signal all subscribers (e.g. ChatInterface) to clear local messages NOW
+    //    before the session is destroyed — this gives components a chance to
+    //    wipe their React state while user_id is still available if needed.
+    sessionEvents.emit('signout')
+
+    // 2. Clear ALL cached chat messages from localStorage so they don't
+    //    rehydrate on the next login on this device. Supabase is the source
+    //    of truth; localStorage is only a write-through cache.
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('aether_chat_'))
+      .forEach(key => localStorage.removeItem(key))
+
+    // 3. Sign out from Supabase
     const { error } = await supabase.auth.signOut()
     if (!error) setUser(null)
     return { error }

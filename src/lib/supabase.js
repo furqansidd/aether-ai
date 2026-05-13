@@ -8,14 +8,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ── Simple event bus for cross-component communication ──
 // Used so that when Sidebar deletes a file, Dashboard can refresh its data.
-const listeners = new Set()
+const dataListeners = new Set()
 
 export const datasetsEvents = {
   subscribe(callback) {
-    listeners.add(callback)
-    return () => listeners.delete(callback)
+    dataListeners.add(callback)
+    return () => dataListeners.delete(callback)
   },
   emit() {
-    listeners.forEach(cb => cb())
+    dataListeners.forEach(cb => cb())
+  },
+}
+
+// ── Session event bus ──
+// Emitted on logout so ChatInterface can clear its local messages state
+// before the auth session is destroyed.
+const sessionListeners = new Set()
+
+export const sessionEvents = {
+  subscribe(callback) {
+    sessionListeners.add(callback)
+    return () => sessionListeners.delete(callback)
+  },
+  emit(eventName) {
+    sessionListeners.forEach(cb => cb(eventName))
   },
 }
