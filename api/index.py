@@ -131,7 +131,7 @@ def parse_agent_response(response_text: str):
     return clean_text, chart_data
 
 # ── Routes ────────────────────────────────────────────────────────────────────
-@app.post("/chat")
+@app.post("/api/chat")
 async def chat_with_data(request: ChatRequest):
     try:
         if supabase is None:
@@ -201,7 +201,7 @@ Standalone request:"""
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/datasets")
+@app.get("/api/datasets")
 async def list_datasets():
     """List all files in the Supabase 'datasets' storage bucket."""
     try:
@@ -227,7 +227,7 @@ async def list_datasets():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/datasets/{file_path:path}")
+@app.delete("/api/datasets/{file_path:path}")
 async def delete_dataset(file_path: str):
     """Delete a file from the Supabase 'datasets' storage bucket."""
     print(f"Backend: Received delete request for: {file_path}")
