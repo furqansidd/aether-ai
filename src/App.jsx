@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -8,7 +9,7 @@ import Dashboard from './components/Dashboard'
 import FileUpload from './components/FileUpload'
 import ChatInterface from './components/ChatInterface'
 import UserMenu from './components/UserMenu'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Menu } from 'lucide-react'
 
 const queryClient = new QueryClient()
 
@@ -40,15 +41,33 @@ function AuthRoute() {
 }
 
 function DashboardLayout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
   return (
-    <div className="flex h-screen bg-[#f9f9fb] text-[#1f2937] font-sans">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar with profile icon */}
-        <header className="flex items-center justify-end px-6 py-3 bg-[#f9f9fb] border-b border-gray-100/60">
+    <div className="flex h-screen bg-[#f9f9fb] text-[#1f2937] font-sans overflow-hidden">
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center justify-between md:justify-end px-4 md:px-6 py-3 bg-[#f9f9fb] border-b border-gray-100/60 z-30">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 -ml-2 text-gray-500 hover:text-[#5D4492] md:hidden"
+          >
+            <Menu size={24} />
+          </button>
           <UserMenu />
         </header>
-        <main className="flex-1 overflow-y-auto p-8">
+
+        <main className="flex-1 overflow-hidden relative">
           <Outlet />
         </main>
       </div>

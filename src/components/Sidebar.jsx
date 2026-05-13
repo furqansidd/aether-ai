@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Home, UploadCloud, MessageSquare, Plus, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, Clock } from 'lucide-react'
+import { Home, UploadCloud, MessageSquare, Plus, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, Clock, X } from 'lucide-react'
 import { supabase, datasetsEvents } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, setIsOpen }) {
   const [datasets, setDatasets] = useState([])
   const [collapsed, setCollapsed] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
@@ -162,9 +162,13 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`${
-        collapsed ? 'w-[68px]' : 'w-[260px]'
-      } bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 ease-in-out relative`}
+      className={`
+        bg-white border-r border-gray-100 flex flex-col h-full transition-all duration-300 ease-in-out
+        fixed md:relative z-50 md:z-auto
+        ${collapsed ? 'md:w-[68px]' : 'md:w-[260px]'} 
+        ${isOpen ? 'translate-x-0 w-[260px]' : '-translate-x-full md:translate-x-0 w-0 md:w-auto'}
+        overflow-hidden
+      `}
     >
       {/* Header */}
       <div className={`p-4 ${collapsed ? 'px-3' : 'px-5'} flex items-center justify-between border-b border-gray-50`}>
@@ -174,12 +178,21 @@ export default function Sidebar() {
             <p className="text-[10px] text-gray-400 font-medium tracking-wide">INTELLIGENCE ACTIVE</p>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors hidden md:block"
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          {/* Mobile close button */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors md:hidden"
+          >
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* New Analysis Button */}

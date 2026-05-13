@@ -244,10 +244,10 @@ export default function ChatInterface() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] max-w-3xl mx-auto">
+    <div className="flex flex-col h-full w-full max-w-4xl mx-auto overflow-hidden">
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-2">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6">
         {messages.length === 0 ? (
           /* ── Empty state: Gemini/ChatGPT-style welcome ── */
           <div className="flex flex-col items-center justify-center h-full -mt-8">
@@ -266,7 +266,7 @@ export default function ChatInterface() {
             </div>
 
             {/* Suggested Prompts */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl px-4 md:px-0">
               {suggestedPrompts.map((prompt, i) => (
                 <button
                   key={i}
@@ -297,9 +297,9 @@ export default function ChatInterface() {
                     : 'bg-transparent text-gray-800'
                 }`}>
                   {msg.role === 'user' ? (
-                    <p className="whitespace-pre-wrap leading-relaxed text-[15px]">{msg.content}</p>
+                    <p className="whitespace-pre-wrap leading-relaxed text-[14px] md:text-[15px]">{msg.content}</p>
                   ) : (
-                    <div className="prose prose-sm max-w-none text-[15px] leading-relaxed
+                    <div className="prose prose-sm max-w-none text-[14px] md:text-[15px] leading-relaxed
                       prose-headings:text-gray-900 prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2
                       prose-p:my-2 prose-p:text-gray-700
                       prose-strong:text-[#5D4492] prose-strong:font-semibold
@@ -341,8 +341,8 @@ export default function ChatInterface() {
       </div>
 
       {/* Input Bar */}
-      <div className="py-4">
-        <div className="relative">
+      <div className="py-4 px-4 md:px-6 border-t border-gray-50 bg-white/80 backdrop-blur-md">
+        <div className="relative max-w-3xl mx-auto">
           <input
             ref={inputRef}
             type="text"
