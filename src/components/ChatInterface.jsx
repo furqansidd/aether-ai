@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Sparkles, BarChart3, Table2, TrendingUp, FileSpreadsheet } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { supabase, sessionEvents } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -306,10 +307,12 @@ export default function ChatInterface() {
                       prose-ol:my-2 prose-ol:pl-4
                       prose-code:bg-[#f0ecfc] prose-code:text-[#5D4492] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:font-mono
                       prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:p-4
-                      prose-table:border-collapse prose-th:bg-[#f5f5f7] prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:text-xs prose-th:font-semibold prose-th:text-gray-600 prose-th:border prose-th:border-gray-200
-                      prose-td:px-3 prose-td:py-2 prose-td:border prose-td:border-gray-100 prose-td:text-sm
+                      /* Table Styling Fixes */
+                      prose-table:block prose-table:overflow-x-auto prose-table:w-full prose-table:border-collapse prose-table:my-6
+                      prose-th:bg-[#f8f7ff] prose-th:px-4 prose-th:py-3 prose-th:text-left prose-th:text-[11px] prose-th:uppercase prose-th:tracking-wider prose-th:font-bold prose-th:text-[#5D4492] prose-th:border prose-th:border-[#e9e4f5]
+                      prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-gray-100 prose-td:text-sm prose-td:text-gray-600
                     ">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   )}
                   {msg.chart && renderChart(msg.chart)}

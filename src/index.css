@@ -17,4 +17,13 @@
     background-color: var(--color-background);
     color: var(--color-text);
   }
+
+  /* Custom Table Styling for Markdown */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: collapse;
+  }
 }
