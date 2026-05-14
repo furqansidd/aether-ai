@@ -61,7 +61,7 @@
   }
 
   .modebar-btn svg {
-    fill: #6b7280 !important; /* text-muted */
+    fill: #a78bfa !important; /* Light purple theme color */
     height: 15px !important;
     width: 15px !important;
     transition: fill 0.2s ease !important;

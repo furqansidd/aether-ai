@@ -241,7 +241,12 @@ export default function ChatInterface({ fileId }) {
             }}
             useResizeHandler={true}
             style={{ width: '100%', height: '100%' }}
-            config={{ responsive: true, displayModeBar: true, displaylogo: false }}
+            config={{ 
+              responsive: true, 
+              displayModeBar: true, 
+              displaylogo: false,
+              modeBarButtons: [['toImage', 'zoomIn2d', 'zoomOut2d', 'resetScale2d']]
+            }}
           />
         </div>
       </ChartErrorBoundary>
