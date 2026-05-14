@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { Component, useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Sparkles, BarChart3, Table2, TrendingUp, FileSpreadsheet } from 'lucide-react'
 import Plot from 'react-plotly.js'
@@ -6,6 +6,31 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { supabase, sessionEvents } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+
+class ChartErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true }
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Chart rendering error:", error, errorInfo)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-80 w-full mt-4 bg-red-50 rounded-xl p-6 flex flex-col items-center justify-center text-red-500 border border-red-100">
+          <BarChart3 size={32} className="mb-2 opacity-50" />
+          <p className="text-sm font-medium">Could not render chart</p>
+          <p className="text-xs opacity-80 mt-1 text-center">The AI provided an invalid chart format.</p>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function ChatInterface({ fileId }) {
   const { user } = useAuth()
@@ -183,22 +208,24 @@ export default function ChatInterface({ fileId }) {
     // Support both the new Plotly JSON format and gracefully fallback if possible,
     // though the agent is instructed to use Plotly's structure natively.
     return (
-      <div className="h-80 w-full mt-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-        <Plot
-          data={chartConfig.data}
-          layout={{
-            ...chartConfig.layout,
-            autosize: true,
-            margin: { t: 40, r: 20, l: 40, b: 40 },
-            font: { family: 'Inter, sans-serif' },
-            paper_bgcolor: 'transparent',
-            plot_bgcolor: 'transparent'
-          }}
-          useResizeHandler={true}
-          style={{ width: '100%', height: '100%' }}
-          config={{ responsive: true, displayModeBar: false }}
-        />
-      </div>
+      <ChartErrorBoundary>
+        <div className="h-80 w-full mt-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+          <Plot
+            data={chartConfig.data}
+            layout={{
+              ...chartConfig.layout,
+              autosize: true,
+              margin: { t: 40, r: 20, l: 40, b: 40 },
+              font: { family: 'Inter, sans-serif' },
+              paper_bgcolor: 'transparent',
+              plot_bgcolor: 'transparent'
+            }}
+            useResizeHandler={true}
+            style={{ width: '100%', height: '100%' }}
+            config={{ responsive: true, displayModeBar: false }}
+          />
+        </div>
+      </ChartErrorBoundary>
     )
   }
 

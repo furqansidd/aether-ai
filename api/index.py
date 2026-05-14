@@ -93,7 +93,7 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
         df,
         verbose=True,
         prefix=final_prefix,
-        agent_type="tool-calling",
+        agent_type="openai-tools",
         allow_dangerous_code=True,
         handle_parsing_errors=True,
     )
