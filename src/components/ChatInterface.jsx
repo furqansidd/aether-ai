@@ -241,7 +241,7 @@ export default function ChatInterface({ fileId }) {
             }}
             useResizeHandler={true}
             style={{ width: '100%', height: '100%' }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, displayModeBar: true, displaylogo: false }}
           />
         </div>
       </ChartErrorBoundary>

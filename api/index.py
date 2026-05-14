@@ -265,8 +265,22 @@ Standalone request:"""
                 # Helper to clean NaN values for JSON serialization
                 def clean_series(series):
                     return series.fillna("").tolist()
-
-                if color_col and color_col in df.columns:
+                
+                if chart_type == "heatmap":
+                    # Calculate correlation matrix for numeric columns
+                    numeric_df = df.select_dtypes(include=['number'])
+                    corr = numeric_df.corr()
+                    # Replace NaN in correlation matrix with None/empty string for JSON
+                    corr = corr.fillna("")
+                    trace = {
+                        "type": "heatmap",
+                        "x": corr.columns.tolist(),
+                        "y": corr.columns.tolist(),
+                        "z": corr.values.tolist(),
+                        "colorscale": "Viridis"
+                    }
+                    traces.append(trace)
+                elif color_col and color_col in df.columns:
                     for name, group in df.groupby(color_col):
                         trace = {"type": chart_type, "name": str(name)}
                         if x_col and x_col in group.columns:
