@@ -1,7 +1,11 @@
 import React, { Component, useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Sparkles, BarChart3, Table2, TrendingUp, FileSpreadsheet } from 'lucide-react'
-import Plot from 'react-plotly.js'
+import PlotComponent from 'react-plotly.js'
+
+// Vite/CommonJS interop: ensure Plot is a valid React component
+const Plot = typeof PlotComponent === 'object' && PlotComponent.default ? PlotComponent.default : PlotComponent
+
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { supabase, sessionEvents } from '../lib/supabase'
