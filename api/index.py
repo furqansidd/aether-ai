@@ -137,6 +137,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token = credentials.credentials
     print(f"DEBUG: Validating token: {token[:10]}...")
     try:
+        if supabase is None:
+            raise Exception("Supabase client is None (Initialization failed)")
+            
         # Verify the token with Supabase
         user_res = supabase.auth.get_user(token)
         if not user_res or not user_res.user:
@@ -146,7 +149,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         return user_res.user
     except Exception as e:
         print(f"DEBUG: Auth error: {e}")
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
+        # Return the actual error message so the user can see what failed
+        raise HTTPException(status_code=401, detail=f"Auth Error: {str(e)}")
 
 # ── Models ────────────────────────────────────────────────────────────────────
 class ChatRequest(BaseModel):
