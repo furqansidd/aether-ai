@@ -234,7 +234,14 @@ export default function ChatInterface({ fileId }) {
             layout={{
               ...plotLayout,
               autosize: true,
-              margin: { t: 40, r: 20, l: 40, b: 40 },
+              margin: { t: 40, r: 10, l: 40, b: 60 },
+              legend: {
+                orientation: 'h',
+                yanchor: 'top',
+                y: -0.15,
+                xanchor: 'center',
+                x: 0.5
+              },
               font: { family: 'Inter, sans-serif' },
               paper_bgcolor: 'transparent',
               plot_bgcolor: 'transparent'
@@ -245,7 +252,7 @@ export default function ChatInterface({ fileId }) {
               responsive: true, 
               displayModeBar: true, 
               displaylogo: false,
-              modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines']
+              modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines']
             }}
           />
         </div>
