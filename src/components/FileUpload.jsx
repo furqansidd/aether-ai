@@ -3,29 +3,33 @@ import { useDropzone } from 'react-dropzone'
 import { UploadCloud } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function FileUpload() {
   const [uploading, setUploading] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const onDrop = useCallback(async (acceptedFiles) => {
     const file = acceptedFiles[0]
-    if (!file) return
+    if (!file || !user) return
     
     setUploading(true)
     try {
       const fileName = `${Date.now()}_${file.name}`
-      // 1. Upload to Supabase Storage 'datasets' bucket
+      const filePath = `${user.id}/${fileName}`
+
+      // 1. Upload to Supabase Storage 'datasets' bucket in user-specific folder
       const { data, error } = await supabase.storage
         .from('datasets')
-        .upload(fileName, file)
+        .upload(filePath, file)
 
       if (error) {
         console.error('Upload Error:', error)
         alert('Failed to upload file.')
       } else {
-        // Redirect to chat
-        navigate(`/chat/${encodeURIComponent(fileName)}`)
+        // Redirect to chat with the full path encoded
+        navigate(`/chat/${encodeURIComponent(filePath)}`)
       }
     } catch (err) {
       console.error(err)

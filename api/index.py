@@ -4,8 +4,9 @@ import os
 # Fix for Vercel: ensure the api/ directory is on the Python path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import pandas as pd
 from supabase import create_client, Client
@@ -100,11 +101,20 @@ except Exception as e:
     print(f"Error initializing Supabase client: {e}")
     supabase = None
 
-try:
-    admin_supabase: Client = create_client(url, service_key if service_key else key)
-except Exception as e:
-    print(f"Error initializing Admin Supabase client: {e}")
-    admin_supabase = None
+# ── Auth Dependency ─────────────────────────────────────────────────────────
+security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        # Verify the token with Supabase
+        user_res = supabase.auth.get_user(token)
+        if not user_res or not user_res.user:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return user_res.user
+    except Exception as e:
+        print(f"Auth error: {e}")
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 # ── Models ────────────────────────────────────────────────────────────────────
 class ChatRequest(BaseModel):
@@ -132,10 +142,15 @@ def parse_agent_response(response_text: str):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.post("/api/chat")
-async def chat_with_data(request: ChatRequest):
+async def chat_with_data(request: ChatRequest, user = Depends(get_current_user)):
     try:
         if supabase is None:
             raise HTTPException(status_code=500, detail="Supabase client not initialized. Check environment variables.")
+
+        # Security Check: Ensure the file_path belongs to the user
+        # Expected format: "user_id/filename"
+        if not request.file_path.startswith(f"{user.id}/"):
+            raise HTTPException(status_code=403, detail="You do not have access to this dataset.")
 
         # 1. Download file from Supabase
         res = supabase.storage.from_("datasets").download(request.file_path)
@@ -159,7 +174,7 @@ async def chat_with_data(request: ChatRequest):
         chat_history = []
         if request.history:
             for i, msg in enumerate(request.history):
-                print(f"  [{i}] {msg['role']}: {msg['content'][:50]}...")
+                # print(f"  [{i}] {msg['role']}: {msg['content'][:50]}...")
                 if msg["role"] == "user":
                     chat_history.append(HumanMessage(content=msg["content"]))
                 else:
@@ -202,19 +217,25 @@ Standalone request:"""
 
 
 @app.get("/api/datasets")
-async def list_datasets():
-    """List all files in the Supabase 'datasets' storage bucket."""
+async def list_datasets(user = Depends(get_current_user)):
+    """List all files in the Supabase 'datasets' storage bucket for the current user."""
     try:
         if supabase is None:
             raise HTTPException(status_code=500, detail="Supabase client not initialized. Check environment variables.")
 
-        res = supabase.storage.from_("datasets").list()
+        # List files in the user's specific folder
+        user_folder = user.id
+        res = supabase.storage.from_("datasets").list(user_folder)
+        
         files = []
         for f in res:
-            if f.get("id") is None:
+            # Skip folders if any (though .list usually returns objects)
+            if f.get("id") is None and f.get("name") == ".emptyKeep":
                 continue
+            
             files.append({
-                "name": f["name"],
+                "name": f"{user_folder}/{f['name']}",
+                "display_name": f["name"], # Just the filename for display
                 "size": f.get("metadata", {}).get("size", 0),
                 "created_at": f.get("created_at", ""),
                 "updated_at": f.get("updated_at", ""),
@@ -228,12 +249,16 @@ async def list_datasets():
 
 
 @app.delete("/api/datasets/{file_path:path}")
-async def delete_dataset(file_path: str):
+async def delete_dataset(file_path: str, user = Depends(get_current_user)):
     """Delete a file from the Supabase 'datasets' storage bucket."""
-    print(f"Backend: Received delete request for: {file_path}")
+    print(f"Backend: Received delete request for: {file_path} from user: {user.id}")
     try:
         if admin_supabase is None:
             raise HTTPException(status_code=500, detail="Admin Supabase client not initialized.")
+
+        # Security Check: Ensure the file_path belongs to the user
+        if not file_path.startswith(f"{user.id}/"):
+            raise HTTPException(status_code=403, detail="You do not have permission to delete this file.")
 
         res = admin_supabase.storage.from_("datasets").remove([file_path])
         print(f"Backend: Supabase removal response: {res}")

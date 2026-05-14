@@ -16,9 +16,15 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   const fetchDatasets = async () => {
+    if (!user) return
     try {
-      const res = await fetch('/api/datasets')
-      const data = await res.json()
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/datasets', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
+      const data = await response.json()
       setDatasets(data.datasets || [])
     } catch (err) {
       console.error('Failed to fetch datasets:', err)
@@ -45,9 +51,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     console.log('Attempting to delete via backend:', name)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       // Call our backend API instead of Supabase directly
       const response = await fetch(`/api/datasets/${encodeURIComponent(name)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
       })
       
       const result = await response.json()
@@ -99,11 +109,12 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const groups = groupDatasets(datasets)
 
   // Clean display name: strip timestamp prefix and extension
-  const getDisplayName = (name) => {
-    // Files are saved as "timestamp_filename.ext"
-    const withoutTimestamp = name.replace(/^\d+_/, '')
+  const getDisplayName = (name, displayName) => {
+    // If backend provided display_name, use it. Otherwise parse from name.
+    const baseName = displayName || name.split('/').pop()
+    const withoutTimestamp = baseName.replace(/^\d+_/, '')
     const withoutExt = withoutTimestamp.replace(/\.(csv|xlsx)$/i, '')
-    return withoutExt || name
+    return withoutExt || baseName
   }
 
   const formatDate = (dateStr) => {
@@ -144,7 +155,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             <FileSpreadsheet size={15} className="flex-shrink-0 opacity-60" />
             {!collapsed && (
               <>
-                <span className="truncate flex-1 text-[13px]">{getDisplayName(item.name)}</span>
+                <span className="truncate flex-1 text-[13px]">{getDisplayName(item.name, item.display_name)}</span>
                 <button
                   onClick={(e) => handleDelete(e, item.name)}
                   className="relative z-30 flex-shrink-0 p-2 -mr-2 rounded-md hover:bg-red-50 hover:text-red-500 transition-all duration-200 opacity-0 group-hover:opacity-100"

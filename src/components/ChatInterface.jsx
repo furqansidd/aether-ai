@@ -19,8 +19,9 @@ export default function ChatInterface() {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Clean display name: strip timestamp prefix and extension
+  // Clean display name: strip folder prefix, timestamp prefix and extension
   const displayName = decodeURIComponent(fileId || '')
+    .split('/').pop() // get only filename
     .replace(/^\d+_/, '')
     .replace(/\.(csv|xlsx)$/i, '')
 
@@ -124,9 +125,13 @@ export default function ChatInterface() {
     setIsLoading(true)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
         body: JSON.stringify({
           file_path: decodeURIComponent(fileId),
           message,

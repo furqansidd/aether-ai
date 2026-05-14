@@ -2,16 +2,24 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileSpreadsheet, UploadCloud, TrendingUp, Database, ArrowRight, Trash2, BarChart3, Sparkles } from 'lucide-react'
 import { supabase, datasetsEvents } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Dashboard() {
   const [datasets, setDatasets] = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const fetchDatasets = async () => {
+    if (!user) return
     try {
-      const res = await fetch('/api/datasets')
-      const data = await res.json()
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/datasets', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
+      const data = await response.json()
       setDatasets(data.datasets || [])
     } catch (err) {
       console.error('Failed to fetch datasets:', err)
@@ -32,8 +40,12 @@ export default function Dashboard() {
     if (!confirmDelete) return
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch(`/api/datasets/${encodeURIComponent(name)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
       })
       
       const result = await response.json()
@@ -53,10 +65,11 @@ export default function Dashboard() {
     }
   }
 
-  const getDisplayName = (name) => {
-    const withoutTimestamp = name.replace(/^\d+_/, '')
+  const getDisplayName = (name, displayName) => {
+    const baseName = displayName || name.split('/').pop()
+    const withoutTimestamp = baseName.replace(/^\d+_/, '')
     const withoutExt = withoutTimestamp.replace(/\.(csv|xlsx)$/i, '')
-    return withoutExt || name
+    return withoutExt || baseName
   }
 
   const formatFileSize = (bytes) => {
@@ -219,7 +232,7 @@ export default function Dashboard() {
                     <FileSpreadsheet size={18} className="text-[#5D4492]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{getDisplayName(dataset.name)}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">{getDisplayName(dataset.name, dataset.display_name)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {formatDate(dataset.created_at)} • {formatTime(dataset.created_at)} • {formatFileSize(dataset.size)}
                     </p>
