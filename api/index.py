@@ -45,19 +45,20 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     - If there are too many categories for a Pie chart, use a Bar chart instead.
     - Use Scatter Plots for showing correlations (e.g., Age vs Fare).
     - Use Box Plots for showing distributions and outliers.
-    - Use Heatmaps for showing correlation matrices between numerical variables.
     - Use Histograms for showing the frequency distribution of a single variable.
 
-    CRITICAL INSTRUCTION FOR CHARTS:
-    If the user asks for a chart or visualization, you must output a structured JSON representing the Plotly chart configuration for the frontend to render.
+    CRITICAL INSTRUCTION FOR CHARTS (PREVENTING TIMEOUTS):
+    Do NOT generate raw data arrays (like `[1, 2, 3...]`) in your JSON output. The dataset is too large and will crash the server.
+    Instead, output a configuration JSON that tells the backend exactly which columns to plot. The backend will inject the data.
 
     Use the following format at the very end of your response exactly as shown:
     ```json
     {
       "chart": {
-        "data": [
-          { "x": ["A", "B"], "y": [10, 20], "type": "bar", "name": "Series 1" }
-        ],
+        "type": "scatter",
+        "x_column": "Age",
+        "y_column": "Fare",
+        "color_column": "Survived",
         "layout": {
           "title": "Chart Title",
           "xaxis": { "title": "X-Axis Label" },
@@ -67,22 +68,18 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
       }
     }
     ```
+    - `type` must be one of: 'scatter', 'bar', 'pie', 'box', 'histogram'.
+    - `x_column` and `y_column` must be exact column names from the dataframe. Use `None` if not applicable.
+    - `color_column` is optional. Use it if you need to distinguish categories (like 'Survived' or 'Pclass').
     
     CONTEXTUAL CLARITY RULES:
     1. Every chart MUST include an X-axis label and a Y-axis label in the `layout`.
-    2. You MUST explicitly enable legends by setting `"showlegend": true` in the `layout` (this satisfies the requirement for explicit options).
-    3. In pie charts, labels must clearly differentiate categories.
-    4. Provide EXACT Plotly JSON structure. For Heatmaps, use `"type": "heatmap"` and provide the `"z"` 2D array.
-
-    RAW DATA RULE (CRITICAL):
-    You MUST use your Python REPL tool to execute the dataframe queries and get the raw data arrays FIRST. 
-    The JSON you output MUST contain ONLY raw, evaluated arrays of numbers or strings (e.g., `"x": [1, 2, 3]`). 
-    NEVER put Python syntax (like `df['Age'].tolist()`) inside the JSON.
+    2. You MUST explicitly enable legends by setting `"showlegend": true` in the `layout`.
 
     NARRATIVE RULE:
-    After showing a chart, explain one "strange" or "unexpected" finding in the data (e.g., "Notice how the 3rd class survival rate is significantly lower despite having similar age groups to 1st class").
+    After showing a chart, explain one "strange" or "unexpected" finding in the data.
 
-    Do NOT output python plotting code (no matplotlib/seaborn). Only output the JSON.
+    Do NOT output python plotting code. Only output the JSON.
     """
 
     history_str = ""
@@ -252,7 +249,60 @@ Standalone request:"""
 
         # 6. Parse Response
         answer_text = raw_response["output"]
-        clean_text, chart_data = parse_agent_response(answer_text)
+        clean_text, chart_config = parse_agent_response(answer_text)
+
+        # 7. Hydrate the chart data using the backend dataframe
+        chart_data = None
+        if chart_config:
+            try:
+                chart_type = chart_config.get("type", "scatter")
+                x_col = chart_config.get("x_column")
+                y_col = chart_config.get("y_column")
+                color_col = chart_config.get("color_column")
+                
+                traces = []
+                
+                # Helper to clean NaN values for JSON serialization
+                def clean_series(series):
+                    return series.fillna("").tolist()
+
+                if color_col and color_col in df.columns:
+                    for name, group in df.groupby(color_col):
+                        trace = {"type": chart_type, "name": str(name)}
+                        if x_col and x_col in group.columns:
+                            trace["x"] = clean_series(group[x_col])
+                        if y_col and y_col in group.columns:
+                            trace["y"] = clean_series(group[y_col])
+                        
+                        if chart_type == "scatter":
+                            trace["mode"] = "markers"
+                        elif chart_type == "pie":
+                            trace["labels"] = trace.pop("x", [])
+                            trace["values"] = trace.pop("y", [])
+                            
+                        traces.append(trace)
+                else:
+                    trace = {"type": chart_type}
+                    if x_col and x_col in df.columns:
+                        trace["x"] = clean_series(df[x_col])
+                    if y_col and y_col in df.columns:
+                        trace["y"] = clean_series(df[y_col])
+                        
+                    if chart_type == "scatter":
+                        trace["mode"] = "markers"
+                    elif chart_type == "pie":
+                        trace["labels"] = trace.pop("x", [])
+                        trace["values"] = trace.pop("y", [])
+                        
+                    traces.append(trace)
+                
+                chart_data = {
+                    "data": traces,
+                    "layout": chart_config.get("layout", {})
+                }
+            except Exception as e:
+                print(f"DEBUG: Failed to build chart data: {e}")
+                chart_data = None
 
         return {"response": clean_text, "chart": chart_data}
 
