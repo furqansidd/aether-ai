@@ -44,6 +44,7 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     Before generating a chart, analyze which format is best:
     - If there are too many categories for a Pie chart, use a Bar chart instead.
     - Use Scatter Plots for showing correlations (e.g., Age vs Fare).
+    - Use Line Charts for showing trends over continuous variables (e.g., Time or Age).
     - Use Box Plots for showing distributions and outliers.
     - Use Histograms for showing the frequency distribution of a single variable.
     - Use Heatmaps for showing correlation matrices between numerical variables.
@@ -70,9 +71,9 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
       }
     }
     ```
-    - `type` must be one of: 'scatter', 'bar', 'pie', 'box', 'histogram'.
-    - `x_column` and `y_column` must be exact column names from the dataframe. Use `None` if not applicable.
-    - `color_column` is optional. Use it if you need to distinguish categories (like 'Survived' or 'Pclass').
+    - `type` must be one of: 'scatter', 'bar', 'pie', 'box', 'histogram', 'heatmap', 'line'.
+    - `x_column` and `y_column` must be exact column names from the dataframe. Use `null` if not applicable.
+    - `color_column` is optional. Use `null` if not needed. Use it if you need to distinguish categories (like 'Survived' or 'Pclass').
     
     CONTEXTUAL CLARITY RULES:
     1. Every chart MUST include an X-axis label and a Y-axis label in the `layout`.
@@ -292,6 +293,9 @@ Standalone request:"""
                         
                         if chart_type == "scatter":
                             trace["mode"] = "markers"
+                        elif chart_type == "line":
+                            trace["type"] = "scatter"
+                            trace["mode"] = "lines"
                         elif chart_type == "pie":
                             trace["labels"] = trace.pop("x", [])
                             trace["values"] = trace.pop("y", [])
@@ -306,6 +310,9 @@ Standalone request:"""
                         
                     if chart_type == "scatter":
                         trace["mode"] = "markers"
+                    elif chart_type == "line":
+                        trace["type"] = "scatter"
+                        trace["mode"] = "lines"
                     elif chart_type == "pie":
                         trace["labels"] = trace.pop("x", [])
                         trace["values"] = trace.pop("y", [])
