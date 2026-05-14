@@ -245,7 +245,7 @@ export default function ChatInterface({ fileId }) {
               responsive: true, 
               displayModeBar: true, 
               displaylogo: false,
-              modeBarButtons: [['toImage', 'zoomIn2d', 'zoomOut2d', 'resetScale2d']]
+              modeBarButtonsToRemove: ['zoom2d', 'pan2d', 'select2d', 'lasso2d', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'toggleSpikelines']
             }}
           />
         </div>

@@ -61,13 +61,16 @@
   }
 
   .modebar-btn svg {
-    fill: #a78bfa !important; /* Light purple theme color */
     height: 15px !important;
     width: 15px !important;
+  }
+
+  .modebar-btn svg path {
+    fill: #a78bfa !important; /* Light purple theme color */
     transition: fill 0.2s ease !important;
   }
 
-  .modebar-btn:hover svg, .modebar-btn.active svg {
+  .modebar-btn:hover svg path, .modebar-btn.active svg path {
     fill: var(--color-primary) !important;
   }
 
