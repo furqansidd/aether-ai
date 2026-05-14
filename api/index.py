@@ -50,8 +50,9 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     - Use Heatmaps for showing correlation matrices between numerical variables.
 
     CRITICAL INSTRUCTION FOR CHARTS (PREVENTING TIMEOUTS):
-    Do NOT generate raw data arrays (like `[1, 2, 3...]`) in your JSON output. The dataset is too large and will crash the server.
-    Instead, output a configuration JSON that tells the backend exactly which columns to plot. The backend will inject the data.
+    1. If plotting RAW DATA (e.g. thousands of rows for a Scatter Plot), DO NOT output raw data arrays. Instead, output `x_column` and `y_column` so the backend can inject the data.
+    2. If plotting AGGREGATED/CALCULATED DATA (e.g. GroupBy results, Survival Rates by Age, Counts), you MUST use your python tool to calculate the exact arrays and output them as `x_data` and `y_data` in the JSON.
+    
     If the user asks for a chart, plot, or heatmap, you MUST output this JSON block.
 
     Use the following format at the very end of your response exactly as shown:
@@ -59,9 +60,14 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     {
       "chart": {
         "type": "heatmap",
+        // FOR RAW DATA PLOTS:
         "x_column": "Age",
         "y_column": "Fare",
         "color_column": "Survived",
+        // OR, FOR AGGREGATED DATA PLOTS:
+        "x_data": [1, 2, 3],
+        "y_data": [0.5, 0.6, 0.7],
+        
         "layout": {
           "title": "Chart Title",
           "xaxis": { "title": "X-Axis Label" },
@@ -73,7 +79,8 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     ```
     - `type` must be one of: 'scatter', 'bar', 'pie', 'box', 'histogram', 'heatmap', 'line'.
     - `x_column` and `y_column` must be exact column names from the dataframe. Use `null` if not applicable.
-    - `color_column` is optional. Use `null` if not needed. Use it if you need to distinguish categories (like 'Survived' or 'Pclass').
+    - `color_column` is optional. Use `null` if not needed.
+    - `x_data` and `y_data` should ONLY be used for aggregated metrics that don't exist as columns.
     
     CONTEXTUAL CLARITY RULES:
     1. Every chart MUST include an X-axis label and a Y-axis label in the `layout`.
@@ -261,6 +268,8 @@ Standalone request:"""
                 chart_type = chart_config.get("type", "scatter")
                 x_col = chart_config.get("x_column")
                 y_col = chart_config.get("y_column")
+                x_data = chart_config.get("x_data")
+                y_data = chart_config.get("y_data")
                 color_col = chart_config.get("color_column")
                 
                 traces = []
@@ -282,6 +291,18 @@ Standalone request:"""
                         "z": corr.values.tolist(),
                         "colorscale": "Viridis"
                     }
+                    traces.append(trace)
+                elif x_data is not None and y_data is not None:
+                    # AI provided exact data arrays (for aggregated metrics)
+                    trace = {"type": chart_type, "x": x_data, "y": y_data}
+                    if chart_type == "scatter":
+                        trace["mode"] = "markers"
+                    elif chart_type == "line":
+                        trace["type"] = "scatter"
+                        trace["mode"] = "lines"
+                    elif chart_type == "pie":
+                        trace["labels"] = trace.pop("x", [])
+                        trace["values"] = trace.pop("y", [])
                     traces.append(trace)
                 elif color_col and color_col in df.columns:
                     for name, group in df.groupby(color_col):
