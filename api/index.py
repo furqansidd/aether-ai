@@ -91,9 +91,9 @@ app.add_middleware(
 )
 
 # ── Supabase clients (safe init) ─────────────────────────────────────────────
-url: str = os.getenv("SUPABASE_URL", "")
-key: str = os.getenv("SUPABASE_ANON_KEY", "")
-service_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+url: str = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL", "")
+key: str = os.getenv("SUPABASE_ANON_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY", "")
+service_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_SERVICE_ROLE_KEY", "")
 
 try:
     supabase: Client = create_client(url, key)
