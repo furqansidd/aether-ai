@@ -82,6 +82,8 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     - `color_column` is optional. Use `null` if not needed.
     - `x_data` and `y_data` should ONLY be used for aggregated metrics that don't exist as columns.
     
+    CRITICAL: You MUST provide the FULL arrays for `x_data` and `y_data`. NEVER use "..." or truncate the data. If the list is long, you must still output every single value.
+    
     CONTEXTUAL CLARITY RULES:
     1. Every chart MUST include an X-axis label and a Y-axis label in the `layout`.
     2. You MUST explicitly enable legends by setting `"showlegend": true` in the `layout`.
@@ -177,14 +179,28 @@ def parse_agent_response(response_text: str):
     chart_data = None
     clean_text = response_text
 
-    match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+    # Try to find JSON inside markdown code blocks first
+    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+    
+    # If not found, try to find any block that looks like a JSON chart object
+    if not match:
+        match = re.search(r'(\{[\s\n]*"chart"[\s\n]*:.*?\})', response_text, re.DOTALL)
+
     if match:
+        json_str = match.group(1)
         try:
-            parsed = json.loads(match.group(1))
+            # Clean common AI "junk" like None or ... (though ... is hard to fix perfectly)
+            json_str = json_str.replace("None", "null")
+            # If AI still uses ... we can't fix the data but we can at least try to parse the rest
+            # though usually it will still fail json.loads.
+            
+            parsed = json.loads(json_str)
             if "chart" in parsed:
                 chart_data = parsed["chart"]
             clean_text = response_text.replace(match.group(0), "").strip()
         except json.JSONDecodeError:
+            # Last ditch effort: if it has "...", it's better to just leave it as text 
+            # so the user knows it failed due to truncation.
             pass
 
     return clean_text, chart_data
