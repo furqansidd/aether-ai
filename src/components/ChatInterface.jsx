@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { ArrowUp, Loader2, Sparkles, BarChart3, Table2, TrendingUp, FileSpreadsheet } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from 'recharts'
+import Plot from 'react-plotly.js'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { supabase, sessionEvents } from '../lib/supabase'
@@ -158,7 +158,8 @@ export default function ChatInterface({ fileId }) {
 
     } catch (error) {
       console.error(error)
-      const errMsg = { role: 'assistant', content: 'Sorry, I encountered an error analyzing your data. Please try again.' }
+      const errorMessage = error.message || 'Sorry, I encountered an error analyzing your data. Please try again.'
+      const errMsg = { role: 'assistant', content: `Error: ${errorMessage}` }
       const finalMessages = [...updatedHistory, errMsg]
       setMessages(finalMessages)
       await persistMessages(finalMessages)
@@ -177,61 +178,28 @@ export default function ChatInterface({ fileId }) {
 
   // ── Chart renderer ────────────────────────────────────────────────────────
   const renderChart = (chartConfig) => {
-    if (!chartConfig || !chartConfig.data || chartConfig.data.length === 0) return null
+    if (!chartConfig || !chartConfig.data) return null
 
-    const COLORS = ['#5D4492', '#d97706', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#f59e0b', '#06b6d4']
-    const { type, data, xKey, yKey } = chartConfig
-
-    if (type === 'bar') {
-      return (
-        <div className="h-64 w-full mt-4 bg-white rounded-xl p-3">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-              <XAxis dataKey={xKey} axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-              <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)', fontSize: '13px'}} />
-              <Bar dataKey={yKey} fill="#5D4492" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    }
-
-    if (type === 'line') {
-      return (
-        <div className="h-64 w-full mt-4 bg-white rounded-xl p-3">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-              <XAxis dataKey={xKey} axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)', fontSize: '13px'}} />
-              <Line type="monotone" dataKey={yKey} stroke="#5D4492" strokeWidth={3} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} activeDot={{r: 6, fill: '#5D4492'}} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    }
-
-    if (type === 'pie') {
-      return (
-        <div className="h-64 w-full mt-4 bg-white rounded-xl p-3 flex justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={data} dataKey={yKey} nameKey={xKey} cx="50%" cy="50%" outerRadius={80} fill="#5D4492" label>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)', fontSize: '13px'}} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )
-    }
-
-    return null
+    // Support both the new Plotly JSON format and gracefully fallback if possible,
+    // though the agent is instructed to use Plotly's structure natively.
+    return (
+      <div className="h-80 w-full mt-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+        <Plot
+          data={chartConfig.data}
+          layout={{
+            ...chartConfig.layout,
+            autosize: true,
+            margin: { t: 40, r: 20, l: 40, b: 40 },
+            font: { family: 'Inter, sans-serif' },
+            paper_bgcolor: 'transparent',
+            plot_bgcolor: 'transparent'
+          }}
+          useResizeHandler={true}
+          style={{ width: '100%', height: '100%' }}
+          config={{ responsive: true, displayModeBar: false }}
+        />
+      </div>
+    )
   }
 
   // ── Loading skeleton while fetching history ───────────────────────────────
