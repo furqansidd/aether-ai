@@ -74,6 +74,11 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     3. In pie charts, labels must clearly differentiate categories.
     4. Provide EXACT Plotly JSON structure. For Heatmaps, use `"type": "heatmap"` and provide the `"z"` 2D array.
 
+    RAW DATA RULE (CRITICAL):
+    You MUST use your Python REPL tool to execute the dataframe queries and get the raw data arrays FIRST. 
+    The JSON you output MUST contain ONLY raw, evaluated arrays of numbers or strings (e.g., `"x": [1, 2, 3]`). 
+    NEVER put Python syntax (like `df['Age'].tolist()`) inside the JSON.
+
     NARRATIVE RULE:
     After showing a chart, explain one "strange" or "unexpected" finding in the data (e.g., "Notice how the 3rd class survival rate is significantly lower despite having similar age groups to 1st class").
 
