@@ -46,16 +46,18 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
     - Use Scatter Plots for showing correlations (e.g., Age vs Fare).
     - Use Box Plots for showing distributions and outliers.
     - Use Histograms for showing the frequency distribution of a single variable.
+    - Use Heatmaps for showing correlation matrices between numerical variables.
 
     CRITICAL INSTRUCTION FOR CHARTS (PREVENTING TIMEOUTS):
     Do NOT generate raw data arrays (like `[1, 2, 3...]`) in your JSON output. The dataset is too large and will crash the server.
     Instead, output a configuration JSON that tells the backend exactly which columns to plot. The backend will inject the data.
+    If the user asks for a chart, plot, or heatmap, you MUST output this JSON block.
 
     Use the following format at the very end of your response exactly as shown:
     ```json
     {
       "chart": {
-        "type": "scatter",
+        "type": "heatmap",
         "x_column": "Age",
         "y_column": "Fare",
         "color_column": "Survived",
