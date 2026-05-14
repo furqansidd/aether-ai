@@ -204,6 +204,19 @@ export default function ChatInterface({ fileId }) {
   // ── Chart renderer ────────────────────────────────────────────────────────
   const renderChart = (chartConfig) => {
     if (!chartConfig || !chartConfig.data) return null
+    
+    // Ensure data is an array (Plotly requirement)
+    let plotData = chartConfig.data
+    if (!Array.isArray(plotData)) {
+      if (typeof plotData === 'object' && plotData !== null) {
+        plotData = [plotData] // Wrap single object in array
+      } else {
+        console.error("Invalid chart data format:", plotData)
+        return null // Will trigger the error boundary if it throws, but we gracefully handle it
+      }
+    }
+
+    const plotLayout = typeof chartConfig.layout === 'object' && chartConfig.layout !== null ? chartConfig.layout : {}
 
     // Support both the new Plotly JSON format and gracefully fallback if possible,
     // though the agent is instructed to use Plotly's structure natively.
@@ -211,9 +224,9 @@ export default function ChatInterface({ fileId }) {
       <ChartErrorBoundary>
         <div className="h-80 w-full mt-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
           <Plot
-            data={chartConfig.data}
+            data={plotData}
             layout={{
-              ...chartConfig.layout,
+              ...plotLayout,
               autosize: true,
               margin: { t: 40, r: 20, l: 40, b: 40 },
               font: { family: 'Inter, sans-serif' },
