@@ -26,4 +26,69 @@
     -webkit-overflow-scrolling: touch;
     border-collapse: collapse;
   }
+
+  /* ── Minimal & Classy Plotly Toolbar Override ── */
+  .modebar {
+    background: transparent !important;
+    padding: 6px !important;
+  }
+
+  .modebar-group {
+    background: rgba(255, 255, 255, 0.75) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(229, 231, 235, 0.8) !important;
+    border-radius: 12px !important;
+    padding: 2px !important;
+    display: inline-flex !important;
+    margin-left: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .modebar-btn {
+    background: transparent !important;
+    border-radius: 8px !important;
+    padding: 5px !important;
+    margin: 0 1px !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .modebar-btn:hover, .modebar-btn.active {
+    background: rgba(93, 68, 146, 0.08) !important; /* Primary purple at low opacity */
+  }
+
+  .modebar-btn svg {
+    fill: #6b7280 !important; /* text-muted */
+    height: 15px !important;
+    width: 15px !important;
+    transition: fill 0.2s ease !important;
+  }
+
+  .modebar-btn:hover svg, .modebar-btn.active svg {
+    fill: var(--color-primary) !important;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .modebar {
+      top: 2px !important;
+      right: 2px !important;
+    }
+    .modebar-group {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-radius: 8px !important;
+      padding: 1px !important;
+      margin-left: 4px !important;
+    }
+    .modebar-btn {
+      padding: 4px !important;
+    }
+    .modebar-btn svg {
+      height: 14px !important;
+      width: 14px !important;
+    }
+  }
 }
