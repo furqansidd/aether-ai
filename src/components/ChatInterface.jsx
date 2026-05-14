@@ -10,21 +10,23 @@ import { useAuth } from '../contexts/AuthContext'
 class ChartErrorBoundary extends Component {
   constructor(props) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, error: null }
   }
   static getDerivedStateFromError(error) {
-    return { hasError: true }
+    return { hasError: true, error }
   }
   componentDidCatch(error, errorInfo) {
     console.error("Chart rendering error:", error, errorInfo)
   }
   render() {
     if (this.state.hasError) {
+      const errorMsg = this.state.error ? this.state.error.toString() : "Unknown error"
       return (
         <div className="h-80 w-full mt-4 bg-red-50 rounded-xl p-6 flex flex-col items-center justify-center text-red-500 border border-red-100">
           <BarChart3 size={32} className="mb-2 opacity-50" />
           <p className="text-sm font-medium">Could not render chart</p>
           <p className="text-xs opacity-80 mt-1 text-center">The AI provided an invalid chart format.</p>
+          <p className="text-[10px] opacity-60 mt-2 font-mono text-center max-w-full overflow-hidden text-ellipsis">{errorMsg}</p>
         </div>
       )
     }
