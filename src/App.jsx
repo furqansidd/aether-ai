@@ -77,8 +77,10 @@ function DashboardLayout() {
 
 // Wrapper that forces ChatInterface to remount when fileId changes
 function ChatWrapper() {
-  const { fileId } = useParams()
-  return <ChatInterface key={fileId} />
+  const params = useParams()
+  // React Router v6 splat is stored in the "*" property
+  const fileId = params['*']
+  return <ChatInterface key={fileId} fileId={fileId} />
 }
 
 function App() {
@@ -96,7 +98,7 @@ function App() {
             }>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/upload" element={<FileUpload />} />
-              <Route path="/chat/:fileId" element={<ChatWrapper />} />
+              <Route path="/chat/*" element={<ChatWrapper />} />
             </Route>
           </Routes>
         </AuthProvider>

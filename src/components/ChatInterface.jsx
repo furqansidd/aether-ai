@@ -7,8 +7,7 @@ import remarkGfm from 'remark-gfm'
 import { supabase, sessionEvents } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-export default function ChatInterface() {
-  const { fileId } = useParams()
+export default function ChatInterface({ fileId }) {
   const { user } = useAuth()
 
   // ── State ──────────────────────────────────────────────────────────────────
