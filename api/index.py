@@ -110,7 +110,7 @@ def get_pandas_agent(df: pd.DataFrame, chat_history: list = None):
         agent_type="openai-tools",
         allow_dangerous_code=True,
         handle_parsing_errors=True,
-        max_iterations=5
+        max_iterations=10
     )
     return agent
 
